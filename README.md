@@ -1,64 +1,97 @@
-# ⏱️ Pomodoro Flutter - Application de Productivité
+# ⏱️ FocusFlow — Pomodoro (Flutter / PWA)
 
-**Pomodoro Flutter** est une application Flutter de productivité intégrant la méthode **Pomodoro**, des **statistiques de focus** et un **assistant IA** pour planifier votre journée efficacement.
+Application de productivité basée sur la méthode **Pomodoro**, développée en
+**Flutter**. Minuteur de focus configurable, **statistiques persistantes**,
+**coach** de productivité, le tout dans une **PWA installable et utilisable
+hors-ligne**, avec une attention particulière portée à l'**accessibilité**.
 
----
-
-## 📱 Fonctionnalités
-
-### 🕒 Pomodoro Timer
-- Sessions de travail de **25 minutes** et **pauses courtes/longues**.  
-- Gestion des tâches en cours avec possibilité de **les nommer, modifier et suivre** leur avancement.
-
-### 📈 Statistiques de Focus
-- Suivi des pomodoros réalisés **aujourd'hui, cette semaine et au total**.  
-- **Graphique hebdomadaire** pour visualiser la progression.  
-- **Moyenne quotidienne** de pomodoros calculée automatiquement.
-
-### 🤖 Assistant IA
-- Répond aux **questions sur la planification**, les statistiques et les **conseils de productivité**.  
-- Fournit des **messages personnalisés** selon vos sessions Pomodoro.
+> Ce dépôt est un projet personnel repris et modernisé : passage d'un prototype
+> mono-fichier à une **architecture en couches testée**, ajout de la
+> **persistance**, du **support PWA/offline** et de l'**accessibilité**.
 
 ---
 
-## 💻 Structure du projet
+## ✨ Fonctionnalités
+
+- **Minuteur Pomodoro** : sessions de travail, pauses courtes et longues, avec
+  enchaînement automatique et durées **entièrement configurables**.
+- **Statistiques persistantes** : nombre de pomodoros et minutes de focus du
+  jour / de la semaine / au total, moyenne quotidienne, graphique hebdomadaire
+  et historique des sessions. Les données **survivent au redémarrage** (et
+  fonctionnent hors-ligne).
+- **Coach de productivité** : assistant conversationnel qui répond selon vos
+  statistiques (basé sur des règles — voir la note d'honnêteté plus bas).
+- **PWA** : installable sur Android/iOS/desktop, chargement hors-ligne via
+  service worker.
+- **Accessibilité** : taille de police réglable, mode **contraste élevé**,
+  thème clair/sombre/système, labels pour lecteurs d'écran et **navigation au
+  clavier** (Espace = démarrer/pause, R = réinitialiser).
+
+> **Note d'honnêteté :** le « Coach » est actuellement à base de règles, pas un
+> modèle d'IA. Le code est structuré ([`CoachEngine`](lib/services/coach_engine.dart))
+> pour brancher une vraie API (Claude/OpenAI) sans toucher à l'interface.
+
+---
+
+## 🏛️ Architecture
+
+Le code est organisé en couches pour la lisibilité et la testabilité. Voir
+[ARCHITECTURE.md](ARCHITECTURE.md) pour le détail.
 
 ```
-pomodoro_flutter/
-├── android/       # Projet Android
-├── ios/           # Projet iOS
-├── lib/           # Code source Flutter
-├── web/           # Version web
-├── linux/         # Version Linux
-├── macos/         # Version macOS
-├── windows/       # Version Windows
-├── test/          # Tests unitaires
-├── build/         # Dossier de build
+lib/
+├── models/       # Données immuables (Session, AppSettings) + (dé)sérialisation
+├── services/     # Persistance (SharedPreferences) + logique pure (calcul stats, coach)
+├── providers/    # Gestion d'état (ChangeNotifier / Provider)
+├── screens/      # Écrans (Pomodoro, Statistiques, Coach, Réglages)
+├── widgets/      # Composants réutilisables (StatCard, WeeklyChart)
+├── theme/        # Thèmes clair/sombre + contraste élevé
+└── main.dart     # Point d'entrée, injection des dépendances
 ```
+
+- **Gestion d'état** : [`provider`](https://pub.dev/packages/provider)
+  (`ChangeNotifier`, `ChangeNotifierProxyProvider`).
+- **Persistance** : [`shared_preferences`](https://pub.dev/packages/shared_preferences)
+  (compatible web/PWA via `localStorage`).
+- **Logique métier isolée de l'UI** (`StatsCalculator`, `CoachEngine`,
+  `TimerProvider`) → couverte par des tests unitaires rapides.
 
 ---
 
-## 🚀 Installation
+## 🧪 Tests
 
-### 1. Cloner le projet
+19 tests couvrent la logique métier et l'interface :
+
 ```bash
-git clone https://github.com/Tening2283/pomodoro_flutter.git
-cd pomodoro_flutter
+flutter test
 ```
 
-### 2. Installer les dépendances
+- Calcul des statistiques (`StatsCalculator`) — fenêtres jour/semaine, moyenne,
+  exclusion des pauses.
+- Cycle du minuteur (`TimerProvider`) — décompte, enregistrement des sessions,
+  transitions travail → pause courte/longue.
+- Sérialisation des modèles + rétro-compatibilité des anciennes données.
+- Moteur du coach (`CoachEngine`).
+- Tests de widgets (démarrage de l'app, navigation).
+
+Une **fiche de recette** manuelle est disponible dans [RECETTE.md](RECETTE.md).
+
+---
+
+## 🚀 Lancer le projet
+
 ```bash
 flutter pub get
 ```
 
-### 3. Exécuter l'application
+**Mobile :**
 
-#### 📱 Mobile :
 ```bash
 flutter run
 ```
 
-#### 🌐 Web :
+**Web / PWA :**
+
 ```bash
 flutter run -d chrome
 ```
@@ -67,57 +100,37 @@ flutter run -d chrome
 
 ## 🛠️ Build
 
-### Android :
+**PWA (web) :**
+
 ```bash
-flutter build apk
+flutter build web --release
 ```
 
-### iOS :
-```bash
-flutter build ios
-```
+Le résultat dans `build/web/` est une PWA (manifeste + service worker)
+installable et utilisable hors-ligne.
 
-### Web :
+**Android :**
+
 ```bash
-flutter build web
+flutter build apk --release
 ```
 
 ---
 
-## 📊 Statistiques
+## 🧭 Choix techniques notables
 
-Les statistiques sont gérées dans la classe **`PomodoroStats`** :
-
-| Méthode | Description |
-|----------|--------------|
-| `addSession(task)` | Ajoute une session terminée |
-| `getStats()` | Récupère les statistiques globales et récentes |
-| `getWeeklyData()` | Retourne le nombre de pomodoros par jour pour la semaine |
-
----
-
-## ✨ Contribution
-
-Les contributions sont **les bienvenues** !
-
-1. Fork le projet  
-2. Crée une branche pour ta fonctionnalité :
-   ```bash
-   git checkout -b feature/ma-fonctionnalite
-   ```
-3. Commit tes modifications :
-   ```bash
-   git commit -m "Ajout d'une nouvelle fonctionnalité"
-   ```
-4. Push et ouvre une **Pull Request**
+| Sujet | Choix | Raison |
+|---|---|---|
+| État | `provider` | Standard, simple à expliquer, testable |
+| Persistance | `shared_preferences` | Multiplateforme **y compris web/PWA** |
+| Logique stats | Fonctions pures | Testables sans dépendance à Flutter |
+| Accessibilité | `Semantics`, `TextScaler`, contraste | Critères d'inclusion explicites |
+| Timer | Isolé de l'UI | Testable avec le temps simulé |
 
 ---
 
 ## 📄 Licence
 
-Ce projet est sous **licence MIT**.  
-Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+Projet sous licence MIT.
 
----
-
-👨‍💻 Développé avec ❤️ en Flutter.
+👨‍💻 Développé avec Flutter.
