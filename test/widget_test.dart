@@ -1,30 +1,44 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+// Smoke test : verifie que l'application se construit et affiche le minuteur.
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pomodoro_flutter/main.dart';
+import 'package:pomodoro_flutter/services/settings_repository.dart';
+import 'package:pomodoro_flutter/services/stats_repository.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('L\'app demarre et affiche le minuteur a 25:00', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final settingsRepo = await SettingsRepository.create();
+    final statsRepo = await StatsRepository.create();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    await tester.pumpWidget(
+      PomodoroApp(settingsRepo: settingsRepo, statsRepo: statsRepo),
+    );
+    await tester.pumpAndSettle();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Le minuteur de travail par defaut affiche 25:00.
+    expect(find.text('25:00'), findsOneWidget);
+    // La barre de navigation contient les 4 onglets.
+    expect(find.text('Stats'), findsOneWidget);
+    expect(find.text('Coach'), findsOneWidget);
+    expect(find.text('Réglages'), findsOneWidget);
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('Navigation vers l\'onglet Statistiques', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final settingsRepo = await SettingsRepository.create();
+    final statsRepo = await StatsRepository.create();
+
+    await tester.pumpWidget(
+      PomodoroApp(settingsRepo: settingsRepo, statsRepo: statsRepo),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Stats'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Progression cette semaine'), findsOneWidget);
+    expect(find.text('Aucune session enregistrée'), findsOneWidget);
   });
 }
